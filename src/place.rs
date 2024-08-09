@@ -5,9 +5,9 @@ use crate::texture::CroppedTexture;
 
 #[derive(Debug, Clone)]
 pub struct TexturePlacerConfig {
-    width: u32,
-    height: u32,
-    padding: u32,
+    pub width: u32,
+    pub height: u32,
+    pub padding: u32,
     // and more option
     // Allow rotation, allow multiple pages, adjust resolution, specify resampling method, etc...
 }
