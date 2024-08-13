@@ -151,17 +151,17 @@ impl CroppedTexture {
         }
         let cropped_image = image.view(x, y, self.width, self.height).to_image();
 
-        // // remove transparent area
-        // let mut clipped = ImageBuffer::new(self.width, self.height);
-        // for (px, py, pixel) in cropped_image.enumerate_pixels() {
-        //     let uv = (
-        //         px as f64 / self.width as f64,
-        //         1.0 - py as f64 / self.height as f64,
-        //     );
-        //     if is_point_inside_polygon(uv, &self.cropped_uv_coords) {
-        //         clipped.put_pixel(px, py, *pixel);
-        //     }
-        // }
+        // remove transparent area
+        let mut clipped = ImageBuffer::new(self.width, self.height);
+        for (px, py, pixel) in cropped_image.enumerate_pixels() {
+            let uv = (
+                px as f64 / self.width as f64,
+                1.0 - py as f64 / self.height as f64,
+            );
+            if is_point_inside_polygon(uv, &self.cropped_uv_coords) {
+                clipped.put_pixel(px, py, *pixel);
+            }
+        }
 
         // let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
 
