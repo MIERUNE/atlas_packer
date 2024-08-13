@@ -147,39 +147,41 @@ impl CroppedTexture {
 
         // remove transparent area
         let mut clipped = ImageBuffer::new(self.width, self.height);
-        for (px, py, pixel) in cropped_image.enumerate_pixels() {
-            let uv = (
-                px as f64 / self.width as f64,
-                1.0 - py as f64 / self.height as f64,
-            );
-            if is_point_inside_polygon(uv, &self.cropped_uv_coords) {
-                clipped.put_pixel(px, py, *pixel);
-            }
-        }
+        // for (px, py, pixel) in cropped_image.enumerate_pixels() {
+        //     let uv = (
+        //         px as f64 / self.width as f64,
+        //         1.0 - py as f64 / self.height as f64,
+        //     );
+        //     if is_point_inside_polygon(uv, &self.cropped_uv_coords) {
+        //         clipped.put_pixel(px, py, *pixel);
+        //     }
+        // }
 
-        let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
+        // let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
 
-        // todo: Review overflow measures
-        let width = clipped.width();
-        let height = clipped.height();
-        let min_x = min_x.min(width - 1);
-        let min_y = min_y.min(height - 1);
-        let max_x = max_x.min(width - 1);
-        let max_y = max_y.min(height - 1);
+        // // todo: Review overflow measures
+        // let width = clipped.width();
+        // let height = clipped.height();
+        // let min_x = min_x.min(width - 1);
+        // let min_y = min_y.min(height - 1);
+        // let max_x = max_x.min(width - 1);
+        // let max_y = max_y.min(height - 1);
 
-        let new_width = if max_x >= min_x { max_x - min_x + 1 } else { 1 };
-        let new_height = if max_y >= min_y { max_y - min_y + 1 } else { 1 };
+        // let new_width = if max_x >= min_x { max_x - min_x + 1 } else { 1 };
+        // let new_height = if max_y >= min_y { max_y - min_y + 1 } else { 1 };
 
-        let trimmed = ImageBuffer::from_fn(new_width, new_height, |x, y| {
-            *clipped.get_pixel(x + min_x, y + min_y)
-        });
+        // let trimmed = ImageBuffer::from_fn(new_width, new_height, |x, y| {
+        //     *clipped.get_pixel(x + min_x, y + min_y)
+        // });
 
         // downsample
-        let scaled_width = (trimmed.width() as f32 * self.downsample_factor.value()) as u32;
-        let scaled_height = (trimmed.height() as f32 * self.downsample_factor.value()) as u32;
+        // let scaled_width = (trimmed.width() as f32 * self.downsample_factor.value()) as u32;
+        // let scaled_height = (trimmed.height() as f32 * self.downsample_factor.value()) as u32;
+        let scaled_width = (clipped.width() as f32 * self.downsample_factor.value()) as u32;
+        let scaled_height = (clipped.height() as f32 * self.downsample_factor.value()) as u32;
 
         DynamicImage::ImageRgba8(image::imageops::resize(
-            &trimmed,
+            &clipped,
             scaled_width,
             scaled_height,
             image::imageops::FilterType::Triangle,
