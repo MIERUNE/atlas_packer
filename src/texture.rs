@@ -159,7 +159,7 @@ impl CroppedTexture {
 
         let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
 
-        // FIXME: Review overflow measures
+        // todo: Review overflow measures
         let width = clipped.width();
         let height = clipped.height();
         let min_x = min_x.min(width - 1);
