@@ -145,8 +145,8 @@ impl CroppedTexture {
         let (x, y) = self.origin;
         if x + self.width > image.width() || y + self.height > image.height() {
             panic!(
-                "The cropped area is out of bounds. x: {}, y: {}, width: {}, height: {}, image_path: {:?}",
-                x, y, self.width, self.height, self.image_path
+                "The cropped area is out of bounds. x: {}, y: {}, width: {}, height: {}, image_path: {:?}, image_width: {}, image_height: {}",
+                x, y, self.width, self.height, self.image_path, image.width(), image.height()
             );
         }
         let cropped_image = image.view(x, y, self.width, self.height).to_image();
