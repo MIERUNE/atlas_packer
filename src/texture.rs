@@ -98,13 +98,13 @@ impl CroppedTexture {
 
         let (width, height) = image.dimensions();
 
-        // UV to pixel coordinates
+        // UV to pixel coordinates with clamping
         let pixel_coords: Vec<(u32, u32)> = uv_coords
             .iter()
             .map(|(u, v)| {
                 (
-                    (u * width as f64) as u32,
-                    ((1.0 - v) * height as f64) as u32,
+                    (u.clamp(0.0, 1.0) * width as f64).min(width as f64 - 1.0) as u32,
+                    ((1.0 - v.clamp(0.0, 1.0)) * height as f64).min(height as f64 - 1.0) as u32,
                 )
             })
             .collect();
