@@ -143,12 +143,6 @@ impl CroppedTexture {
 
     pub fn crop(&self, image: &DynamicImage) -> DynamicImage {
         let (x, y) = self.origin;
-        if x + self.width > image.width() || y + self.height > image.height() {
-            panic!(
-                "The cropped area is out of bounds. x: {}, y: {}, width: {}, height: {}, image_path: {:?}, image_width: {}, image_height: {}",
-                x, y, self.width, self.height, self.image_path, image.width(), image.height()
-            );
-        }
         let cropped_image = image.view(x, y, self.width, self.height).to_image();
 
         // remove transparent area
@@ -163,31 +157,17 @@ impl CroppedTexture {
             }
         }
 
-        // let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
-
-        // // todo: Review overflow measures
-        // let width = clipped.width();
-        // let height = clipped.height();
-        // let min_x = min_x.min(width - 1);
-        // let min_y = min_y.min(height - 1);
-        // let max_x = max_x.min(width - 1);
-        // let max_y = max_y.min(height - 1);
-
-        // let new_width = if max_x >= min_x { max_x - min_x + 1 } else { 1 };
-        // let new_height = if max_y >= min_y { max_y - min_y + 1 } else { 1 };
-
-        // let trimmed = ImageBuffer::from_fn(new_width, new_height, |x, y| {
-        //     *clipped.get_pixel(x + min_x, y + min_y)
-        // });
+        let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
+        let trimmed = ImageBuffer::from_fn(max_x - min_x + 1, max_y - min_y + 1, |x, y| {
+            *clipped.get_pixel(x + min_x, y + min_y)
+        });
 
         // downsample
-        // let scaled_width = (trimmed.width() as f32 * self.downsample_factor.value()) as u32;
-        // let scaled_height = (trimmed.height() as f32 * self.downsample_factor.value()) as u32;
-        let scaled_width = (clipped.width() as f32 * self.downsample_factor.value()) as u32;
-        let scaled_height = (clipped.height() as f32 * self.downsample_factor.value()) as u32;
+        let scaled_width = (trimmed.width() as f32 * self.downsample_factor.value()) as u32;
+        let scaled_height = (trimmed.height() as f32 * self.downsample_factor.value()) as u32;
 
         DynamicImage::ImageRgba8(image::imageops::resize(
-            &clipped,
+            &trimmed,
             scaled_width,
             scaled_height,
             image::imageops::FilterType::Triangle,

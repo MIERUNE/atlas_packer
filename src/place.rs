@@ -336,13 +336,6 @@ impl TexturePlacer for GuillotineTexturePlacer {
         let height = scaled_height + self.config.padding;
 
         if let Some(rect) = self.find_best_rect(width, height) {
-            if rect.x + width > self.config.width || rect.y + height > self.config.height {
-                panic!(
-                    "テクスチャ '{}' が有効な範囲外に配置されようとしています",
-                    id
-                );
-            }
-
             let placed_uv_coords = texture
                 .cropped_uv_coords
                 .iter()
