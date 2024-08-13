@@ -158,7 +158,20 @@ impl CroppedTexture {
         }
 
         let (min_x, min_y, max_x, max_y) = find_non_transparent_bounds(&clipped);
-        let trimmed = ImageBuffer::from_fn(max_x - min_x + 1, max_y - min_y + 1, |x, y| {
+
+        // 境界チェックを追加
+        let width = clipped.width();
+        let height = clipped.height();
+        let min_x = min_x.min(width - 1);
+        let min_y = min_y.min(height - 1);
+        let max_x = max_x.min(width - 1);
+        let max_y = max_y.min(height - 1);
+
+        // オーバーフローを防ぐために、max_x >= min_x と max_y >= min_y を確認
+        let new_width = if max_x >= min_x { max_x - min_x + 1 } else { 1 };
+        let new_height = if max_y >= min_y { max_y - min_y + 1 } else { 1 };
+
+        let trimmed = ImageBuffer::from_fn(new_width, new_height, |x, y| {
             *clipped.get_pixel(x + min_x, y + min_y)
         });
 
