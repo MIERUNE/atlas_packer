@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use atlas_packer::{
     export::PngAtlasExporter,
@@ -16,10 +17,12 @@ struct Polygon {
 }
 
 fn main() {
+    let all_process_start = Instant::now();
+
     // 3D Tiles Sink passes the texture path and UV coordinates for each polygon
     let mut polygons: Vec<Polygon> = Vec::new();
     let downsample_factor = 1.0;
-    for i in 0..10 {
+    for i in 0..200 {
         for j in 1..11 {
             // Specify a polygon to crop around the center of the image
             let uv_coords = vec![
@@ -44,13 +47,21 @@ fn main() {
     }
 
     // initialize texture packer
-    let config = TexturePlacerConfig::default();
+    let config = TexturePlacerConfig {
+        width: 4096,
+        height: 4096,
+        padding: 0,
+    };
     let placer = GuillotineTexturePlacer::new(config.clone());
     let exporter = PngAtlasExporter::default();
     let mut packer = TexturePacker::new(placer, exporter);
 
     // Texture cache
     let texture_cache = TextureCache::new(100_000_000);
+
+    let mut texture_count = 0;
+
+    let start = Instant::now();
 
     // Add textures to the atlas
     polygons.iter().for_each(|polygon| {
@@ -59,12 +70,25 @@ fn main() {
             &polygon.texture_uri,
             &polygon.downsample_factor.value(),
         );
-        let info = packer.add_texture(polygon.id.clone(), texture);
-        println!("{:?}", info);
+        let _ = packer.add_texture(polygon.id.clone(), texture);
+        texture_count += 1
+        // println!("{:?}", info);
     });
+    println!("There are {} sheets of this texture.", texture_count);
+
+    let duration = start.elapsed();
+    println!("atlas process {:?}", duration);
 
     packer.finalize();
 
+    let start = Instant::now();
+
     let output_dir = Path::new("examples/output/");
     packer.export(output_dir, &texture_cache, config.width(), config.height());
+
+    let duration = start.elapsed();
+    println!("atlas export process {:?}", duration);
+
+    let duration = all_process_start.elapsed();
+    println!("all process {:?}", duration);
 }
