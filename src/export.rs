@@ -6,7 +6,7 @@ use image::{ImageBuffer, ImageFormat};
 use crate::place::PlacedTextureInfo;
 use crate::texture::{CroppedTexture, TextureCache};
 
-pub trait AtlasExporter {
+pub trait AtlasExporter: Sync + Send {
     fn export(
         &self,
         atlas_data: &[PlacedTextureInfo],
