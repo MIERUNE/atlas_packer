@@ -21,8 +21,10 @@ pub fn unused_pixels() -> (usize, usize) {
     let input = matches
         .get_one::<String>("INPUT")
         .expect("INPUT is required");
-    let img = open(input).expect("Failed to open image");
-
+    let img = open(input).unwrap_or_else(|e| {
+        eprintln!("Failed to open image: {}", e);
+        std::process::exit(1);
+    });
     let all_pixels = img.width() as usize * img.height() as usize;
 
     if matches.get_flag("unused_pixels") {
