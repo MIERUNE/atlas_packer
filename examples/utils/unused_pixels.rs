@@ -1,4 +1,4 @@
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 use image::{open, GenericImageView, Rgba};
 
 pub fn unused_pixels() -> (usize, usize) {
@@ -10,8 +10,14 @@ pub fn unused_pixels() -> (usize, usize) {
                 .required(true)
                 .index(1),
         )
+        .arg(
+            Arg::new("unused_pixels")
+                .help("Outputs unused pixels")
+                .short('u')
+                .long("unused")
+                .action(ArgAction::SetTrue),
+        )
         .get_matches();
-
     let input = matches
         .get_one::<String>("INPUT")
         .expect("INPUT is required");
@@ -19,10 +25,13 @@ pub fn unused_pixels() -> (usize, usize) {
 
     let total_pixels = img.width() as usize * img.height() as usize;
 
-    let unused_pixels = img
-        .pixels()
-        .filter(|&(_, _, pixel)| matches!(pixel, Rgba([0, 0, 0, 0])))
-        .count();
-
-    (total_pixels, unused_pixels)
+    if matches.get_flag("unused_pixels") {
+        let unused_pixels = img
+            .pixels()
+            .filter(|&(_, _, pixel)| matches!(pixel, Rgba([0, 0, 0, 0])))
+            .count();
+        (total_pixels, unused_pixels)
+    } else {
+        (total_pixels, 0)
+    }
 }
