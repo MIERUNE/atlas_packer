@@ -8,6 +8,7 @@ use atlas_packer::{
     pack::TexturePacker,
     place::{GuillotineTexturePlacer, TexturePlacerConfig},
     texture::{DownsampleFactor, TextureCache},
+    unused_pixels::unused_pixels,
 };
 
 #[derive(Debug, Clone)]
@@ -212,4 +213,5 @@ fn main() {
 
     let output_dir = Path::new("examples/output/");
     packer.export(output_dir, &texture_cache, config.width(), config.height());
+    unused_pixels()
 }
