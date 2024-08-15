@@ -23,15 +23,15 @@ pub fn unused_pixels() -> (usize, usize) {
         .expect("INPUT is required");
     let img = open(input).expect("Failed to open image");
 
-    let total_pixels = img.width() as usize * img.height() as usize;
+    let all_pixels = img.width() as usize * img.height() as usize;
 
     if matches.get_flag("unused_pixels") {
         let unused_pixels = img
             .pixels()
             .filter(|&(_, _, pixel)| matches!(pixel, Rgba([0, 0, 0, 0])))
             .count();
-        (total_pixels, unused_pixels)
+        (all_pixels, unused_pixels)
     } else {
-        (total_pixels, 0)
+        (all_pixels, 0)
     }
 }

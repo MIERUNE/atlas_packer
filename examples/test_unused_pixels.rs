@@ -21,10 +21,7 @@ fn main() {
     let output_dir = Path::new("examples/output/");
     packer.export(output_dir, &texture_cache, config.width(), config.height());
 
-    let (total_pixels, unused_pixels) = unused_pixels::unused_pixels();
+    let (all_pixels, unused_pixels) = unused_pixels::unused_pixels();
 
-    println!(
-        "Total Pixels: {}, Unused Pixels: {}",
-        total_pixels, unused_pixels
-    );
+    println!("unused pixels: {} / {}", unused_pixels, all_pixels);
 }
