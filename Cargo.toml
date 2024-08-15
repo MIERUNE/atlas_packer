@@ -12,7 +12,3 @@ clap = {version = "4.5.9", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3.10.1"
-
-[[bin]]
-name = "atlas-packer"
-path = "examples/test_pack_dice.rs"
