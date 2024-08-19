@@ -8,7 +8,6 @@ use atlas_packer::{
     pack::TexturePacker,
     place::{GuillotineTexturePlacer, TexturePlacerConfig},
     texture::{DownsampleFactor, TextureCache},
-    unused_pixels::unused_pixels,
 };
 
 #[derive(Debug, Clone)]
