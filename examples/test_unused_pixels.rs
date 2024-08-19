@@ -1,3 +1,5 @@
+mod utils;
+
 use std::path::Path;
 
 use atlas_packer::{
@@ -7,7 +9,6 @@ use atlas_packer::{
     texture::TextureCache,
 };
 
-mod utils;
 use utils::unused_pixels;
 
 fn main() {
