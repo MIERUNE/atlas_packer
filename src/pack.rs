@@ -5,6 +5,7 @@ use rayon::prelude::*;
 
 use crate::export::AtlasExporter;
 use crate::place::{PlacedTextureInfo, TexturePlacer};
+use crate::rectpack::{Image, Node, Rectangle};
 use crate::texture::{CroppedTexture, TextureCache};
 
 pub type Atlas = Vec<PlacedTextureInfo>;
@@ -15,21 +16,35 @@ pub struct TexturePacker<P: TexturePlacer, E: AtlasExporter> {
     pub atlases: HashMap<String, Atlas>,
     placer: P,
     exporter: E,
+    root_node: Node,
 }
 
 impl<P: TexturePlacer, E: AtlasExporter> TexturePacker<P, E> {
-    pub fn new(placer: P, exporter: E) -> Self {
+    pub fn new(placer: P, exporter: E, width: u32, height: u32) -> Self {
+        let root_rect = Rectangle {
+            left: 0,
+            top: 0,
+            right: width,
+            bottom: height,
+        };
         TexturePacker {
             textures: HashMap::new(),
             current_atlas: Vec::new(),
             atlases: HashMap::new(),
             placer,
             exporter,
+            root_node: Node::new(root_rect),
         }
     }
 
     pub fn add_texture(&mut self, id: String, texture: CroppedTexture) -> PlacedTextureInfo {
         let current_atlas_id = self.atlases.len();
+
+        let img = Image {
+            id: id.clone(),
+            width: texture.width,
+            height: texture.height,
+        };
 
         if self.placer.can_place(&texture) {
             let texture_info =
