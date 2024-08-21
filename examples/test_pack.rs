@@ -39,7 +39,7 @@ fn main() {
                 (0.3, 0.8),
                 (0.2, 0.7),
             ];
-            let path_string: String = format!("atlas-packer/examples/assets/{}.png", j);
+            let path_string: String = format!("./examples/assets/{}.png", j);
             let image_path = PathBuf::from(path_string.as_str());
             polygons.push(Polygon {
                 id: format!("texture_{}_{}", i, j),
@@ -59,6 +59,8 @@ fn main() {
     let placer = GuillotineTexturePlacer::new(config.clone());
     let exporter = JpegAtlasExporter::default();
     let packer = Mutex::new(TexturePacker::new(placer, exporter));
+
+    let packing_start = Instant::now();
 
     // cache image size
     let texture_size_cache = TextureSizeCache::new();
@@ -85,14 +87,17 @@ fn main() {
 
     packer.finalize();
 
+    let duration = packing_start.elapsed();
+    println!("all packing process {:?}", duration);
+
     let start = Instant::now();
 
     // Caches the original textures for exporting to an atlas.
     let texture_cache = TextureCache::new(100_000_000);
-    let output_dir = Path::new("atlas-packer/examples/output/");
+    let output_dir = Path::new("./examples/output/");
     packer.export(output_dir, &texture_cache, config.width(), config.height());
     let duration = start.elapsed();
-    println!("atlas export process {:?}", duration);
+    println!("all atlas export process {:?}", duration);
 
     let duration = all_process_start.elapsed();
     println!("all process {:?}", duration);
