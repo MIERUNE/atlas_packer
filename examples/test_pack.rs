@@ -1,8 +1,12 @@
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::Instant;
 
+use atlas_packer::texture::{CroppedTexture, TextureSizeCache};
+use rayon::prelude::*;
+
 use atlas_packer::{
-    export::PngAtlasExporter,
+    export::JpegAtlasExporter,
     pack::TexturePacker,
     place::{GuillotineTexturePlacer, TexturePlacerConfig},
     texture::{DownsampleFactor, TextureCache},
@@ -35,7 +39,7 @@ fn main() {
                 (0.3, 0.8),
                 (0.2, 0.7),
             ];
-            let path_string: String = format!("examples/assets/{}.png", j);
+            let path_string: String = format!("./examples/assets/{}.png", j);
             let image_path = PathBuf::from(path_string.as_str());
             polygons.push(Polygon {
                 id: format!("texture_{}_{}", i, j),
@@ -53,41 +57,47 @@ fn main() {
         padding: 0,
     };
     let placer = GuillotineTexturePlacer::new(config.clone());
-    let exporter = PngAtlasExporter::default();
-    let mut packer = TexturePacker::new(placer, exporter);
+    let exporter = JpegAtlasExporter::default();
+    let packer = Mutex::new(TexturePacker::new(placer, exporter));
 
-    // Texture cache
-    let texture_cache = TextureCache::new(100_000_000);
+    let packing_start = Instant::now();
 
-    let mut texture_count = 0;
-
-    let start = Instant::now();
-
-    // Add textures to the atlas
-    polygons.iter().for_each(|polygon| {
-        let texture = texture_cache.get_or_insert(
-            &polygon.uv_coords,
+    // cache image size
+    let texture_size_cache = TextureSizeCache::new();
+    // place textures on the atlas
+    polygons.par_iter().for_each(|polygon| {
+        let place_start = Instant::now();
+        let texture_size = texture_size_cache.get_or_insert(&polygon.texture_uri);
+        let cropped_texture = CroppedTexture::new(
             &polygon.texture_uri,
-            &polygon.downsample_factor.value(),
+            texture_size,
+            &polygon.uv_coords,
+            polygon.downsample_factor.clone(),
         );
-        let _ = packer.add_texture(polygon.id.clone(), texture);
-        texture_count += 1
-        // println!("{:?}", info);
-    });
-    println!("There are {} sheets of this texture.", texture_count);
 
-    let duration = start.elapsed();
-    println!("atlas process {:?}", duration);
+        let _ = packer
+            .lock()
+            .unwrap()
+            .add_texture(polygon.id.clone(), cropped_texture);
+        let place_duration = place_start.elapsed();
+        println!("{}, texture place process {:?}", polygon.id, place_duration);
+    });
+
+    let mut packer = packer.into_inner().unwrap();
 
     packer.finalize();
 
+    let duration = packing_start.elapsed();
+    println!("all packing process {:?}", duration);
+
     let start = Instant::now();
 
-    let output_dir = Path::new("examples/output/");
+    // Caches the original textures for exporting to an atlas.
+    let texture_cache = TextureCache::new(100_000_000);
+    let output_dir = Path::new("./examples/output/");
     packer.export(output_dir, &texture_cache, config.width(), config.height());
-
     let duration = start.elapsed();
-    println!("atlas export process {:?}", duration);
+    println!("all atlas export process {:?}", duration);
 
     let duration = all_process_start.elapsed();
     println!("all process {:?}", duration);
