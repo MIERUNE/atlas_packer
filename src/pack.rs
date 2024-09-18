@@ -9,70 +9,98 @@ use crate::texture::{CroppedTexture, TextureCache};
 
 pub type Atlas = Vec<PlacedTextureInfo>;
 
-pub struct TexturePacker<P: TexturePlacer, E: AtlasExporter> {
-    pub textures: HashMap<String, CroppedTexture>,
-    pub current_atlas: Atlas,
-    pub atlases: HashMap<String, Atlas>,
+pub struct TexturePackerBuilder<P: TexturePlacer> {
     placer: P,
-    exporter: E,
+    // texture id -> texture
+    textures: HashMap<String, CroppedTexture>,
 }
 
-impl<P: TexturePlacer, E: AtlasExporter> TexturePacker<P, E> {
-    pub fn new(placer: P, exporter: E) -> Self {
-        TexturePacker {
-            textures: HashMap::new(),
-            current_atlas: Vec::new(),
-            atlases: HashMap::new(),
+impl<P: TexturePlacer> TexturePackerBuilder<P> {
+    pub fn new(placer: P) -> Self {
+        TexturePackerBuilder {
             placer,
-            exporter,
+            textures: HashMap::new(),
         }
     }
 
-    pub fn add_texture(&mut self, id: String, texture: CroppedTexture) -> PlacedTextureInfo {
-        let current_atlas_id = self.atlases.len();
-
-        if self.placer.can_place(&texture) {
-            let texture_info =
-                self.placer
-                    .place_texture(&id, &texture, current_atlas_id.to_string().as_ref());
-            self.textures.insert(id, texture);
-
-            self.current_atlas.push(texture_info.clone());
-
-            texture_info
-        } else {
-            self.atlases
-                .insert(current_atlas_id.to_string(), self.current_atlas.clone());
-            self.current_atlas.clear();
-            self.placer.reset_param();
-
-            let current_atlas_id = self.atlases.len();
-
-            let texture_info =
-                self.placer
-                    .place_texture(&id, &texture, current_atlas_id.to_string().as_ref());
-            self.textures.insert(id, texture);
-
-            self.current_atlas.push(texture_info.clone());
-
-            texture_info
-        }
+    pub fn add_texture(&mut self, texture_id: String, texture: CroppedTexture) {
+        self.textures.insert(texture_id, texture);
     }
 
-    pub fn finalize(&mut self) {
-        if !self.current_atlas.is_empty() {
-            let current_atlas_id = self.atlases.len();
+    pub fn build(mut self) -> TextureAtlasProvider {
+        // See the definition of TextureAtlasProvider for more information about the below variables
+        let mut current_atlas: Atlas = Vec::new();
+        let mut atlases: HashMap<String, Atlas> = HashMap::new();
+        let mut texture_info_map: HashMap<String, (String, usize)> = HashMap::new();
 
-            self.atlases
-                .insert(current_atlas_id.to_string(), self.current_atlas.clone());
-            self.current_atlas.clear();
+        for (texture_id, texture) in self.textures.iter() {
+            let (atlas_id, atlas_index) = {
+                let current_atlas_id = atlases.len();
+
+                if self.placer.can_place(&texture) {
+                    let texture_info = self.placer.place_texture(
+                        &texture_id,
+                        &texture,
+                        current_atlas_id.to_string().as_ref(),
+                    );
+                    current_atlas.push(texture_info.clone());
+                    (current_atlas_id.to_string(), current_atlas.len() - 1)
+                } else {
+                    atlases.insert(current_atlas_id.to_string(), current_atlas.clone());
+                    current_atlas.clear();
+                    self.placer.reset_param();
+
+                    let current_atlas_id = atlases.len();
+
+                    let texture_info = self.placer.place_texture(
+                        &texture_id,
+                        &texture,
+                        current_atlas_id.to_string().as_ref(),
+                    );
+                    current_atlas.push(texture_info.clone());
+                    (current_atlas_id.to_string(), current_atlas.len() - 1)
+                }
+            };
+            texture_info_map.insert(texture_id.clone(), (atlas_id, atlas_index));
+        }
+
+        // treat the last atlas
+        if !current_atlas.is_empty() {
+            let current_atlas_id = atlases.len();
+
+            atlases.insert(current_atlas_id.to_string(), current_atlas.clone());
+            current_atlas.clear();
+        }
+
+        TextureAtlasProvider {
+            textures: self.textures,
+            atlases,
+            texture_info_map,
         }
     }
+}
 
-    pub fn export(&self, output_dir: &Path, texture_cache: &TextureCache, width: u32, height: u32) {
+pub struct TextureAtlasProvider {
+    // texture id -> texture
+    textures: HashMap<String, CroppedTexture>,
+    // atlas id -> atlas
+    atlases: HashMap<String, Atlas>,
+    // texture id -> (atlas id, index in the atlas)
+    texture_info_map: HashMap<String, (String, usize)>,
+}
+
+impl TextureAtlasProvider {
+    pub fn export<E: AtlasExporter>(
+        &self,
+        exporter: E,
+        output_dir: &Path,
+        texture_cache: &TextureCache,
+        width: u32,
+        height: u32,
+    ) {
         self.atlases.par_iter().for_each(|(id, atlas)| {
             let output_path = output_dir.join(id);
-            self.exporter.export(
+            exporter.export(
                 atlas,
                 &self.textures,
                 &output_path,
@@ -81,5 +109,11 @@ impl<P: TexturePlacer, E: AtlasExporter> TexturePacker<P, E> {
                 height,
             );
         });
+    }
+
+    pub fn get_texture_info(&self, id: &str) -> Option<&PlacedTextureInfo> {
+        let (atlas_id, altas_index) = self.texture_info_map.get(id)?;
+        let atlas = self.atlases.get(atlas_id)?;
+        atlas.get(*altas_index)
     }
 }

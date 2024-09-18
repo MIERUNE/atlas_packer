@@ -1,13 +1,14 @@
+use core::num;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Instant;
 
-use atlas_packer::pack::TexturePackerBuilder;
 use atlas_packer::texture::{CroppedTexture, TextureSizeCache};
 use rayon::prelude::*;
 
 use atlas_packer::{
     export::JpegAtlasExporter,
+    pack::TexturePacker,
     place::{GuillotineTexturePlacer, TexturePlacerConfig},
     texture::{DownsampleFactor, TextureCache},
 };
@@ -20,6 +21,10 @@ struct Polygon {
     downsample_factor: DownsampleFactor,
 }
 
+fn random_in_range(min: f64, max: f64) -> f64 {
+    min + (max - min) * rand::random::<f64>()
+}
+
 fn main() {
     let all_process_start = Instant::now();
 
@@ -29,16 +34,28 @@ fn main() {
     for i in 0..200 {
         for j in 1..11 {
             // Specify a polygon to crop around the center of the image
-            let uv_coords = vec![
-                (0.2, 0.3),
-                (0.3, 0.2),
-                (0.6, 0.2),
-                (0.8, 0.3),
-                (0.8, 0.7),
-                (0.6, 0.8),
-                (0.3, 0.8),
-                (0.2, 0.7),
-            ];
+
+            // generate random polygon
+            let edge_radius = 0.3;
+            let center_x = random_in_range(edge_radius, 1.0 - edge_radius);
+            let center_y = random_in_range(edge_radius, 1.0 - edge_radius);
+
+            let num_points = rand::random::<usize>() % 10 + 3;
+            let mut radians = (0..num_points)
+                .map(|_| random_in_range(0.0, 6.28))
+                .collect::<Vec<f64>>();
+            radians.sort_by(|a, b| a.total_cmp(b));
+
+            let uv_coords = radians
+                .iter()
+                .map(|radian| {
+                    let radius = random_in_range(edge_radius * 0.1, edge_radius);
+                    let x = center_x + radius * radian.cos();
+                    let y = center_y + radius * radian.sin();
+                    (x, y)
+                })
+                .collect::<Vec<(f64, f64)>>();
+
             let path_string: String = format!("./examples/assets/{}.png", j);
             let image_path = PathBuf::from(path_string.as_str());
             polygons.push(Polygon {
@@ -58,7 +75,7 @@ fn main() {
     };
     let placer = GuillotineTexturePlacer::new(config.clone());
     let exporter = JpegAtlasExporter::default();
-    let packer = Mutex::new(TexturePackerBuilder::new(placer));
+    let packer = Mutex::new(TexturePacker::new(placer, exporter));
 
     let packing_start = Instant::now();
 

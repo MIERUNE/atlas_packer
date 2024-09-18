@@ -12,4 +12,5 @@ sys-info = "0.7.0"
 clap = {version = "4.5.9", features = ["derive"] }
 
 [dev-dependencies]
+rand = "0.8.5"
 tempfile = "3.10.1"

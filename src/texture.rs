@@ -123,6 +123,7 @@ impl Drop for TextureCache {
 }
 
 // A structure that retains an image cut out from the original image.
+#[derive(Debug, Clone)]
 pub struct CroppedTexture {
     pub image_path: PathBuf,
     // The origin of the cropped image in the original image (top-left corner).
@@ -165,6 +166,16 @@ impl CroppedTexture {
             downsample_factor,
             cropped_uv_coords: dest_uv_coords,
         }
+    }
+
+    pub(super) fn overlaps(&self, other: &CroppedTexture) -> bool {
+        if self.image_path != other.image_path {
+            return false;
+        }
+        let (x1, y1, w1, h1) = (self.origin.0, self.origin.1, self.width, self.height);
+        let (x2, y2, w2, h2) = (other.origin.0, other.origin.1, other.width, other.height);
+
+        x1 < x2 + w2 && x2 < x1 + w1 && y1 < y2 + h2 && y2 < y1 + h1
     }
 
     pub fn crop(&self, image: &DynamicImage) -> DynamicImage {
