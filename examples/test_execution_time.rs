@@ -1,20 +1,16 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf, sync::Mutex, time::Instant};
 
 use image::{open, GenericImageView, Rgba};
 
 use atlas_packer::{
     export::PngAtlasExporter,
     pack::TexturePacker,
-    place::{GuillotineTexturePlacer, TexturePlacerConfig},
-    texture::{DownsampleFactor, TextureCache},
+    place::{GuillotineTexturePlacer, TexturePlacer, TexturePlacerConfig},
+    texture::{CroppedTexture, DownsampleFactor, TextureSizeCache},
 };
 
 use clap::{Arg, ArgAction, Command};
 mod utils;
-use utils::execution_time::ExecutionTimer;
 
 #[derive(Debug, Clone)]
 struct Polygon {
@@ -22,6 +18,22 @@ struct Polygon {
     uv_coords: Vec<(f64, f64)>,
     texture_uri: PathBuf,
     downsample_factor: DownsampleFactor,
+}
+
+mod algorithms {
+    pub struct GuillotineTexturePlacer;
+
+    impl GuillotineTexturePlacer {
+        pub fn new() -> Self {
+            GuillotineTexturePlacer
+        }
+
+        pub fn execute(&self) {
+            println!("Using GuillotineTexturePlacer algorithm.");
+        }
+    }
+
+    // Add more algorithms here
 }
 
 fn main() {
@@ -197,6 +209,14 @@ fn main() {
     let matches = Command::new("Image Processor")
         .about("Processes images to find unused pixels")
         .arg(
+            Arg::new("ALGORITHM")
+                .help("Specify the packing algorithm (guillotine or custom)")
+                .short('a')
+                .long("algorithm")
+                .default_value("guillotine")
+                .action(ArgAction::Set),
+        )
+        .arg(
             Arg::new("INPUT")
                 .help("Outputs unused pixels")
                 .short('u')
@@ -213,35 +233,52 @@ fn main() {
         )
         .get_matches();
 
+    let algorithm = matches.get_one::<String>("ALGORITHM").unwrap();
+
+    match algorithm.as_str() {
+        "guillotine" => {
+            let placer = algorithms::GuillotineTexturePlacer::new();
+            placer.execute();
+        }
+        _ => {
+            eprintln!("Unknown algorithm: {}", algorithm);
+            std::process::exit(1);
+        }
+    }
+
     // initialize texture packer
     let config = TexturePlacerConfig::new(500, 500, 1);
-    let placer = GuillotineTexturePlacer::new(config.clone());
+    let placer: Box<dyn TexturePlacer> = Box::new(GuillotineTexturePlacer::new(config.clone()));
     let exporter = PngAtlasExporter::default();
-    let mut packer = TexturePacker::new(placer, exporter);
+    let packer = Mutex::new(TexturePacker::new(placer, exporter));
 
     // Texture cache
-    let texture_cache = TextureCache::new(100_000_000);
+    let texture_cache = TextureSizeCache::new();
 
     // Measure execution time start for adding textures to the atlas
-    let timer = ExecutionTimer::start();
+    let measure_time = matches.get_flag("TIME");
 
     // Add textures to the atlas,
     polygons.iter().for_each(|polygon| {
-        let texture = texture_cache.get_or_insert(
-            &polygon.uv_coords,
+        let place_start = Instant::now();
+        let texture_size = texture_cache.get_or_insert(&polygon.texture_uri);
+        let cropped_texture = CroppedTexture::new(
             &polygon.texture_uri,
-            &polygon.downsample_factor.value(),
+            texture_size,
+            &polygon.uv_coords,
+            polygon.downsample_factor.clone(),
         );
-        let info = packer.add_texture(polygon.id.clone(), texture);
-        println!("{:?}", info);
+
+        let _ = packer
+            .lock()
+            .unwrap()
+            .add_texture(polygon.id.clone(), cropped_texture);
+        let place_duration = place_start.elapsed();
+
+        if measure_time {
+            println!("{}, texture place process {:?}", polygon.id, place_duration);
+        }
     });
-
-    let measure_time = matches.get_flag("TIME");
-
-    if measure_time {
-        let elapsed_time = timer.elapsed();
-        println!("Execution time: {:.2?}", elapsed_time);
-    }
 
     let output_unused_pixels = matches.contains_id("INPUT");
 
@@ -251,9 +288,6 @@ fn main() {
             std::process::exit(0);
         }
     };
-
-    let output_dir = Path::new("./examples/output/");
-    packer.export(output_dir, &texture_cache, config.width(), config.height());
 
     let img = open(input).expect("Failed to open image");
 

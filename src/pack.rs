@@ -9,16 +9,16 @@ use crate::texture::{CroppedTexture, TextureCache};
 
 pub type Atlas = Vec<PlacedTextureInfo>;
 
-pub struct TexturePacker<P: TexturePlacer, E: AtlasExporter> {
+pub struct TexturePacker<E: AtlasExporter> {
     pub textures: HashMap<String, CroppedTexture>,
     pub current_atlas: Atlas,
     pub atlases: HashMap<String, Atlas>,
-    placer: P,
+    placer: Box<dyn TexturePlacer>,
     exporter: E,
 }
 
-impl<P: TexturePlacer, E: AtlasExporter> TexturePacker<P, E> {
-    pub fn new(placer: P, exporter: E) -> Self {
+impl<E: AtlasExporter> TexturePacker<E> {
+    pub fn new(placer: Box<dyn TexturePlacer>, exporter: E) -> Self {
         TexturePacker {
             textures: HashMap::new(),
             current_atlas: Vec::new(),
