@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Instant;
 
+use atlas_packer::place::TexturePlacer;
 use atlas_packer::texture::{CroppedTexture, TextureSizeCache};
 use rayon::prelude::*;
 
@@ -56,7 +57,7 @@ fn main() {
         height: 4096,
         padding: 0,
     };
-    let placer = GuillotineTexturePlacer::new(config.clone());
+    let placer: Box<dyn TexturePlacer> = Box::new(GuillotineTexturePlacer::new(config.clone()));
     let exporter = JpegAtlasExporter::default();
     let packer = Mutex::new(TexturePacker::new(placer, exporter));
 
