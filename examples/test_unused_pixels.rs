@@ -4,7 +4,7 @@ use std::path::Path;
 
 use atlas_packer::{
     export::PngAtlasExporter,
-    pack::TexturePacker,
+    pack::AtlasPacker,
     place::{GuillotineTexturePlacer, TexturePlacerConfig},
     texture::TextureCache,
 };
@@ -15,12 +15,18 @@ fn main() {
     let texture_cache = TextureCache::new(100_000_000);
 
     let config = TexturePlacerConfig::new(500, 500, 1);
-    let placer = GuillotineTexturePlacer::new(config.clone());
-    let exporter = PngAtlasExporter::default();
-    let packer = TexturePacker::new(placer, exporter);
+
+    let packer = AtlasPacker::default();
+    let packed = packer.pack(GuillotineTexturePlacer::new(config.clone()));
 
     let output_dir = Path::new("examples/output/");
-    packer.export(output_dir, &texture_cache, config.width(), config.height());
+    packed.export(
+        PngAtlasExporter::default(),
+        output_dir,
+        &texture_cache,
+        config.width(),
+        config.height(),
+    );
 
     let (all_pixels, unused_pixels) = unused_pixels::unused_pixels();
 
