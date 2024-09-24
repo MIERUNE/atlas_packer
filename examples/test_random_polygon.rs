@@ -1,3 +1,4 @@
+use std::f64::consts::TAU;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Instant;
@@ -41,7 +42,7 @@ fn main() {
 
             let num_points = rand::random::<usize>() % 10 + 3;
             let mut radians = (0..num_points)
-                .map(|_| random_in_range(0.0, 6.28))
+                .map(|_| random_in_range(0.0, TAU))
                 .collect::<Vec<f64>>();
             radians.sort_by(|a, b| a.total_cmp(b));
 
@@ -90,7 +91,7 @@ fn main() {
             polygon.downsample_factor.clone(),
         );
 
-        let _ = packer
+        packer
             .lock()
             .unwrap()
             .add_texture(polygon.id.clone(), cropped_texture);

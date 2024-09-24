@@ -74,7 +74,7 @@ fn main() {
             polygon.downsample_factor.clone(),
         );
 
-        let _ = packer
+        packer
             .lock()
             .unwrap()
             .add_texture(polygon.id.clone(), cropped_texture);
