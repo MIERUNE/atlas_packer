@@ -155,8 +155,8 @@ impl ClusterBoundingTexture {
 
     pub fn get_buffered_geometry(&self) -> (i32, i32, u32, u32) {
         (
-            (self.crop_origin.0 - self.buffer) as i32,
-            (self.crop_origin.1 - self.buffer) as i32,
+            (self.crop_origin.0 as i32 - self.buffer as i32),
+            (self.crop_origin.1 as i32 - self.buffer as i32),
             self.crop_width + self.buffer * 2,
             self.crop_height + self.buffer * 2,
         )
